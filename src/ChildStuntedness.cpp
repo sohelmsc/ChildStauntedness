@@ -31,36 +31,37 @@ struct comparator
 	}
 };
 
-
 class ChildStuntedness{
 
 	public:
-			vector<double> predict(vector<string> &sTraining, vector<string> &sTesting);
+			 void predict(std::vector<string> &sTraining, std::vector<string> &sTesting);
 	private:
 			 inline void weightUpdate(double *weights, double *nodeVal,double **inputData, double out, double learnRate, int inputNum, int nodeNum,int hidLayers, int rowNum);
 			 inline void computeNeuron(double **trainData, double *weights, double *nodeVal, int hidLayers, int inputNum, int rowNum, int param);
 			 inline double activationFunction(double x, int param);
 };
 
-
 // *** Predict the output parameters based on the training of the artificial neural network (ANN)
-// *** Here back propagation multi-layer perceptron (MLP) is used for training the input dataset.
-vector<double> ChildStuntedness::predict(vector<string> &sTraining, vector<string> &sTesting)
+// *** Here back propagation multi-layer perceptron (MLP) is used for training the input data set.
+void ChildStuntedness::predict(std::vector<string> &sTraining, std::vector<string> &sTesting)
 {
 	double *weights, *weights1, learningRate[2]={0.1, 0.1}, totErr, error, *nodeVal, *nodeVal1;
 	double **inputTesting, **inputTraining, **outputTraining, maxError=10.0E-15;
-    int hiddenLayers=2, dataNum, dataCountTrain, elementCount, dataCountTest, epochNum=700,epochCount=0;
-    int weightNum, inputNum=8, nodeNum, babyId, dataNum1;
+	std::vector<double> predictVal;
+
+    int hiddenLayers=2, trDataSize, dataCountTrain, elementCount, dataCountTest, epochNum=700,epochCount=0;
+    int weightNum, inputNum=8, nodeNum, babyId, tsDataSize;
     std::string token;
-    vector<double>b;
     vector<idPair> id;
 
-    dataNum = sTraining.size();
-    dataNum1 = sTesting.size();
+    trDataSize = sTraining.size();
+    tsDataSize = sTesting.size();
+
+    predictVal.reserve(tsDataSize*2);
 
     /* Considering 8 input parameters */
     weightNum = (inputNum+1) * (hiddenLayers*inputNum + 1);
-    nodeNum = (hiddenLayers*inputNum +  hiddenLayers +1);
+    nodeNum = (hiddenLayers*(inputNum + 1) +1);
 
     /*  1D double dynamic memory allocation with ( weightNum X 1) size ************/
 	weights = (double *) malloc(sizeof(double) * weightNum);
@@ -71,20 +72,19 @@ vector<double> ChildStuntedness::predict(vector<string> &sTraining, vector<strin
 	nodeVal1 = (double *) malloc(sizeof(double) * nodeNum);
 
     /*  2D double dynamic memory allocation with (dataNum X tokenNum+1) size *****/
-    inputTraining = (double **) malloc(sizeof(double *) * dataNum);
-    for(int i=0; i<dataNum; i++)
+    inputTraining = (double **) malloc(sizeof(double *) * trDataSize);
+    for(int i=0; i<trDataSize; i++)
     	inputTraining[i] = (double *) malloc(sizeof(double) * inputNum+1);
 
     /*  2D double dynamic memory allocation with (dataNum X 2) size *************/
-	outputTraining = (double **) malloc(sizeof(double *) * dataNum);
-	for(int i=0; i<dataNum; i++)
+	outputTraining = (double **) malloc(sizeof(double *) * trDataSize);
+	for(int i=0; i<trDataSize; i++)
 		outputTraining[i] = (double *) malloc(sizeof(double) * 2);
 
 	/*  2D double dynamic memory allocation with (dataNum X tokenNum+1) size ************/
-	inputTesting = (double **) malloc(sizeof(double *) * dataNum1);
-	for(int i=0; i<dataNum1; i++)
+	inputTesting = (double **) malloc(sizeof(double *) * tsDataSize);
+	for(int i=0; i<tsDataSize; i++)
 		inputTesting[i] = (double *) malloc(sizeof(double) * inputNum+1);
-
 
 	/****************************** Initialise random weights  ***********************/
 	for(int i=0; i<weightNum; i++)
@@ -95,7 +95,7 @@ vector<double> ChildStuntedness::predict(vector<string> &sTraining, vector<strin
 
 	/****************************** Parsing the training data set *******************/
 	dataCountTrain = 0;
-    while(dataCountTrain<dataNum)
+    while(dataCountTrain<trDataSize)
 	{
 		std::istringstream fetusInfo(sTraining[dataCountTrain]);
 		elementCount = 0;
@@ -118,7 +118,7 @@ vector<double> ChildStuntedness::predict(vector<string> &sTraining, vector<strin
 
 	/****************************** Parsing the testing data set *********************/
 	dataCountTest = 0;
-    while(dataCountTest<dataNum1)
+    while(dataCountTest<tsDataSize)
 	{
 		std::istringstream fetusInfo(sTesting[dataCountTest]);
 		elementCount = 0;
@@ -137,7 +137,6 @@ vector<double> ChildStuntedness::predict(vector<string> &sTraining, vector<strin
     		}
 			elementCount++;
 		}
-
     	/* BIAS of the network */
     	inputTesting[dataCountTest][inputNum] = -1;
     	dataCountTest++;
@@ -148,7 +147,7 @@ vector<double> ChildStuntedness::predict(vector<string> &sTraining, vector<strin
     while((epochCount < epochNum) && (totErr-maxError)>0.0)
     {
     	totErr = 0;
-    	for(int i=0; i<dataNum; i++)
+    	for(int i=0; i<trDataSize; i++)
     	{
     		computeNeuron(inputTraining, weights, nodeVal, hiddenLayers,inputNum, i, 0);
     		error = 0.5*pow((outputTraining[i][0] - nodeVal[nodeNum-1]),2);
@@ -157,12 +156,13 @@ vector<double> ChildStuntedness::predict(vector<string> &sTraining, vector<strin
     	}
     	epochCount++;
     }
+    // Train with different weight ***********************************************************/
     totErr = 10000.0;
     epochCount = 0;
     while((epochCount < epochNum) && (totErr-maxError)>0.0)
     {
     	totErr = 0;
-    	for(int i=0; i<dataNum; i++)
+    	for(int i=0; i<trDataSize; i++)
     	{
     		computeNeuron(inputTraining, weights1, nodeVal1, hiddenLayers,inputNum, i, 1);
     		error = 0.5*pow((outputTraining[i][1] - nodeVal1[nodeNum-1]),2);
@@ -174,19 +174,19 @@ vector<double> ChildStuntedness::predict(vector<string> &sTraining, vector<strin
 
     std::sort(id.begin(), id.end(), comparator());
 
-    int pre_id = id[0].first;
-
-    for(int i=0; i<=dataNum1; i++)
+    // Predict value for testing data *******************************////
+    for(int i=0; i<tsDataSize; i++)
 	{
-
-		if((i>0 && pre_id != id[i].first))
+		if((i>0))
 		{
+			// Baby weight
 			computeNeuron(inputTesting, weights, nodeVal, hiddenLayers,inputNum, id[i].second, 0);
-			b.push_back(nodeVal[nodeNum-1]);
+			predictVal.push_back(nodeVal[nodeNum-1]);
+
 
 			// Baby birth duration
 			computeNeuron(inputTesting, weights1, nodeVal1, hiddenLayers,inputNum, id[i].second, 1);
-			b.push_back(nodeVal1[nodeNum-1]);
+			predictVal.push_back(nodeVal1[nodeNum-1]);
 
 		}
 
@@ -194,16 +194,16 @@ vector<double> ChildStuntedness::predict(vector<string> &sTraining, vector<strin
 		{
 			// Baby weight
 			computeNeuron(inputTesting, weights, nodeVal, hiddenLayers,inputNum, id[i].second, 0);
-			b.push_back(nodeVal[nodeNum-1]);
+			predictVal.push_back(nodeVal[nodeNum-1]);
 
 			// Baby birth duration
 			computeNeuron(inputTesting, weights1, nodeVal1, hiddenLayers,inputNum, id[i].second, 1);
-			b.push_back(nodeVal1[nodeNum-1]);
+			predictVal.push_back(nodeVal1[nodeNum-1]);
 		}
-		pre_id = id[i].first;
 	}
 
-	return b;
+   	for(unsigned int i=0; i<predictVal.size(); i++)
+		std::cout << predictVal[i] <<std::endl;
 }
 
 
@@ -300,14 +300,12 @@ inline double ChildStuntedness::activationFunction(double x, int param)
 
 int main()
 {
-
-	vector<string> sTr;
-	vector<string> sTs;
-	vector<double> b;
+	std::vector<string> sTr;
+	std::vector<string> sTs;
 
 	clock_t start, finish;
 
-	/// Sample input parameters
+	/// Sample input data set
 	sTr.push_back("9,0.645051195,0,2,0,0.565724789,0.509087642,0.610132359,0.479853315,0.506471927,0.558087248,0.028567054,0.722222222,0.442367601");
 	sTr.push_back("51,0.436860068,1,2,0,0.393117519,0.328628866,0.410235079,0.318274877,0.328387182,0.366602529,0.019592691,0.55952381,0.414330218");
 	sTr.push_back("64,0.529010239,1,2,0,0.497251757,0.406787932,0.529352757,0.406420842,0.398363189,0.463302586,0.02557803,0.660714286,0.429906542");
@@ -319,11 +317,11 @@ int main()
 
     ChildStuntedness ch;
     start = clock();
-	b = ch.predict(sTr,sTs);
+
+    ch.predict(sTr,sTs);
 	finish = clock();
+
     std::cout << "Time: " << (finish-start)/double(CLOCKS_PER_SEC) << " Seconds " <<std::endl;
 
-	for(int i=0; i<b.size(); i++)
-			std::cout << b[i] << "-----" <<std::endl;
     return 0;
 }
