@@ -13,7 +13,7 @@ Here I have applied back propagation multilayer percepton using SIGMOID as activ
 This code is developed for the Marathon project in topcoder site. 
 
 Requirement: 
-1. g++/C++
+1. g++
 
 
 To run:
@@ -26,7 +26,6 @@ To run:
 Thanks
 Mafijul Bhuiyan
 University of alberta 
-Edmonton, Canada
                   	
 
  
